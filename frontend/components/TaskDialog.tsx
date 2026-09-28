@@ -36,7 +36,7 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { Link, router, useForm, usePage, usePoll } from 'nestjs-mvc/react';
-import { type FormEvent, type ReactNode, useEffect } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useRef } from 'react';
 import { colorOf } from '../lib/colors';
 import { clock, fileSize, initials, relative } from '../lib/format';
 import { openQuickAdd } from '../lib/quickAdd';
@@ -546,14 +546,18 @@ function Properties({ task }: { task: TaskDetail }) {
  */
 export function TaskDialog() {
   const page = usePage<SharedProps & DetailProps>();
-  const { task, comments = [], commentsCursor } = page.props;
+  const { task: current, comments = [], commentsCursor } = page.props;
+  // While the dialog animates closed, keep showing the task it had.
+  const last = useRef(current);
+  if (current) last.current = current;
+  const task = current ?? last.current;
   const phone = useMediaQuery('(max-width: 48em)');
   const wanted = new URLSearchParams(page.url.split('?')[1] ?? '').get('task');
 
   useEffect(() => {
-    if (wanted && task === undefined)
+    if (wanted && current === undefined)
       router.reload({ only: ['task', 'comments', 'commentsCursor'] });
-  }, [wanted, task === undefined]);
+  }, [wanted, current === undefined]);
 
   const shared = !!task && task.people.length > 1;
   const poll = usePoll(
@@ -570,7 +574,7 @@ export function TaskDialog() {
     return () => poll.stop();
   }, [shared, wanted]);
 
-  const opened = !!wanted && !!task;
+  const opened = !!wanted && !!current;
   const { previous, next } = task
     ? neighbours(task.id)
     : { previous: null, next: null };
