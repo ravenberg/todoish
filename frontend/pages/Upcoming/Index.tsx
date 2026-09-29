@@ -1,6 +1,19 @@
-import { Box, Button, Group, Loader, Popover, Text } from '@mantine/core';
-import { DatePicker, MiniCalendar } from '@mantine/dates';
-import { IconChevronDown } from '@tabler/icons-react';
+import {
+  Box,
+  Button,
+  Group,
+  Loader,
+  Popover,
+  SimpleGrid,
+  Text,
+  UnstyledButton,
+} from '@mantine/core';
+import { DatePicker } from '@mantine/dates';
+import {
+  IconChevronDown,
+  IconChevronLeft,
+  IconChevronRight,
+} from '@tabler/icons-react';
 import { InfiniteScroll, router, usePage } from 'nestjs-mvc/react';
 import { useEffect, useState } from 'react';
 import { EmptyState } from '../../components/Illustration';
@@ -18,6 +31,53 @@ interface Props extends DetailProps {
 }
 
 const dayId = (date: string) => `day-${date}`;
+const maxDay = (a: string, b: string) => (a > b ? a : b);
+
+/** The Monday on or before a day. */
+function mondayOf(day: string) {
+  const weekday = new Date(`${day}T12:00`).getDay();
+  return addDays(day, -((weekday + 6) % 7));
+}
+
+/**
+ * Todoist's week strip: seven days in a row, today's number in a red
+ * circle, the day you're looking at in bold. Days gone by are greyed out.
+ */
+function WeekStrip({
+  today,
+  selected,
+  onSelect,
+}: {
+  today: string;
+  selected: string;
+  onSelect: (day: string) => void;
+}) {
+  const monday = mondayOf(selected);
+  return (
+    <SimpleGrid cols={7} spacing={0} className="week-strip">
+      {Array.from({ length: 7 }, (_, i) => addDays(monday, i)).map((day) => {
+        const date = new Date(`${day}T12:00`);
+        const past = day < today;
+        return (
+          <UnstyledButton
+            key={day}
+            className="week-day"
+            disabled={past}
+            data-past={past || undefined}
+            data-today={day === today || undefined}
+            data-selected={day === selected || undefined}
+            onClick={() => onSelect(day)}
+          >
+            <span>
+              {date.toLocaleDateString('en-GB', { weekday: 'short' })}
+            </span>{' '}
+            <span className="week-num">{date.getDate()}</span>
+          </UnstyledButton>
+        );
+      })}
+    </SimpleGrid>
+  );
+}
 
 /**
  * Upcoming: every day from today on, as far as you scroll. `days` is a
@@ -55,13 +115,14 @@ export default function Upcoming({ overdue, days }: Props) {
     <>
       <PageHeader title="Upcoming" />
       <Box className="upcoming-strip" mb="sm">
-        <Group justify="space-between" mb={6}>
+        <Group justify="space-between" mb={8}>
           <Popover opened={picker} onChange={setPicker} position="bottom-start">
             <Popover.Target>
               <Button
                 variant="subtle"
                 color="gray"
                 size="compact-md"
+                c="var(--mantine-color-text)"
                 rightSection={<IconChevronDown size={14} />}
                 onClick={() => setPicker((o) => !o)}
               >
@@ -80,32 +141,36 @@ export default function Upcoming({ overdue, days }: Props) {
               />
             </Popover.Dropdown>
           </Popover>
-          <Button
-            variant="default"
-            size="compact-sm"
-            onClick={() => jump(today)}
-          >
-            Today
-          </Button>
+          <Button.Group>
+            <Button
+              variant="default"
+              size="compact-sm"
+              px={6}
+              disabled={mondayOf(start) <= today}
+              onClick={() => jump(maxDay(addDays(start, -7), today))}
+              aria-label="Previous week"
+            >
+              <IconChevronLeft size={16} />
+            </Button>
+            <Button
+              variant="default"
+              size="compact-sm"
+              onClick={() => jump(today)}
+            >
+              Today
+            </Button>
+            <Button
+              variant="default"
+              size="compact-sm"
+              px={6}
+              onClick={() => jump(mondayOf(addDays(start, 7)))}
+              aria-label="Next week"
+            >
+              <IconChevronRight size={16} />
+            </Button>
+          </Button.Group>
         </Group>
-        <MiniCalendar
-          date={start}
-          onDateChange={setStart}
-          value={start}
-          onChange={jump}
-          minDate={today}
-          numberOfDays={7}
-          getDayProps={(date) =>
-            date === today
-              ? {
-                  style: {
-                    color: 'var(--mantine-color-tomato-6)',
-                    fontWeight: 700,
-                  },
-                }
-              : {}
-          }
-        />
+        <WeekStrip today={today} selected={start} onSelect={jump} />
       </Box>
 
       {overdue.length > 0 && (

@@ -1,18 +1,24 @@
 import {
   ActionIcon,
+  Anchor,
   Avatar,
   Box,
   Button,
   FileButton,
   Group,
   Menu,
-  SegmentedControl,
+  Popover,
+  SimpleGrid,
+  Stack,
   Text,
   TextInput,
   Tooltip,
+  UnstyledButton,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import { modals } from '@mantine/modals';
 import {
+  IconAdjustmentsHorizontal,
   IconDots,
   IconDownload,
   IconEdit,
@@ -34,7 +40,6 @@ import { PageHeader } from '../../components/PageHeader';
 import { showProjectForm } from '../../components/ProjectForm';
 import { ShareDialog } from '../../components/ShareDialog';
 import { TaskList } from '../../components/TaskList';
-import { colorOf } from '../../lib/colors';
 import { initials } from '../../lib/format';
 import { setPageDefaults } from '../../lib/quickAdd';
 import { byPosition, nest, setTaskOrder } from '../../lib/tasks';
@@ -56,6 +61,107 @@ interface Props extends DetailProps {
   tasks: TaskRow[];
   cursor: string;
   changes: Record<string, TaskRow>;
+}
+
+/**
+ * Todoist's "View" button: a popover with the layouts as two cards.
+ */
+function ViewPicker({
+  value,
+  onChange,
+  icon = false,
+}: {
+  value: 'list' | 'board';
+  onChange: (view: string) => void;
+  icon?: boolean;
+}) {
+  const layouts = [
+    ['list', 'List', <IconLayoutList key="l" size={22} />],
+    ['board', 'Board', <IconLayoutBoard key="b" size={22} />],
+  ] as const;
+  return (
+    <Popover position="bottom-end" width={240} withinPortal>
+      <Popover.Target>
+        {icon ? (
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            radius="xl"
+            size="lg"
+            aria-label="View"
+          >
+            <IconAdjustmentsHorizontal size={18} />
+          </ActionIcon>
+        ) : (
+          <Button
+            variant="subtle"
+            color="gray"
+            size="compact-md"
+            leftSection={<IconAdjustmentsHorizontal size={16} />}
+          >
+            View
+          </Button>
+        )}
+      </Popover.Target>
+      <Popover.Dropdown>
+        <Text size="xs" fw={700} c="dimmed" mb={6}>
+          Layout
+        </Text>
+        <SimpleGrid cols={2} spacing={6}>
+          {layouts.map(([key, label, glyph]) => (
+            <UnstyledButton
+              key={key}
+              className="layout-card"
+              data-active={value === key || undefined}
+              onClick={() => onChange(key)}
+            >
+              <Stack gap={4} align="center">
+                {glyph}
+                <Text size="xs" fw={600}>
+                  {label}
+                </Text>
+              </Stack>
+            </UnstyledButton>
+          ))}
+        </SimpleGrid>
+      </Popover.Dropdown>
+    </Popover>
+  );
+}
+
+/** The body of the "Rename section" modal. */
+function RenameSection({
+  name,
+  onSave,
+}: {
+  name: string;
+  onSave: (name: string) => void;
+}) {
+  const form = useForm({ name });
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!form.data.name.trim()) return;
+    onSave(form.data.name.trim());
+    modals.closeAll();
+  }
+  return (
+    <form onSubmit={submit}>
+      <TextInput
+        data-autofocus
+        value={form.data.name}
+        onChange={(e) => form.setData('name', e.currentTarget.value)}
+        aria-label="Section name"
+      />
+      <Group justify="flex-end" gap="xs" mt="md">
+        <Button variant="light" color="gray" onClick={() => modals.closeAll()}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={!form.data.name.trim()}>
+          Save
+        </Button>
+      </Group>
+    </form>
+  );
 }
 
 /**
@@ -109,19 +215,27 @@ function SectionHeader({
           <Menu.Dropdown>
             <Menu.Item
               leftSection={<IconEdit size={16} />}
-              onClick={() => {
-                const name = window.prompt('Rename section', section.name);
-                if (name?.trim())
-                  router.patch(
-                    `/projects/${projectId}/sections/${section.id}`,
-                    { name },
-                    {
-                      only: ['sections'],
-                      preserveScroll: true,
-                      preserveState: true,
-                    },
-                  );
-              }}
+              onClick={() =>
+                modals.open({
+                  title: 'Rename section',
+                  children: (
+                    <RenameSection
+                      name={section.name}
+                      onSave={(name) =>
+                        router.patch(
+                          `/projects/${projectId}/sections/${section.id}`,
+                          { name },
+                          {
+                            only: ['sections'],
+                            preserveScroll: true,
+                            preserveState: true,
+                          },
+                        )
+                      }
+                    />
+                  ),
+                })
+              }
             >
               Rename
             </Menu.Item>
@@ -254,24 +368,25 @@ export default function Show({
 
   return (
     <Box data-wide={project.viewStyle === 'board' || undefined}>
+      <Anchor
+        component={Link}
+        href="/projects"
+        size="xs"
+        c="dimmed"
+        visibleFrom="sm"
+        mt={-16}
+        mb={8}
+        display="block"
+      >
+        My Projects /
+      </Anchor>
       <PageHeader
         title={project.name}
-        icon={
-          <Box
-            w={12}
-            h={12}
-            style={{
-              borderRadius: 99,
-              background: colorOf(project.color),
-              flex: 'none',
-            }}
-          />
-        }
         description={shared ? `Shared by ${project.owner.name}` : undefined}
         actions={
-          <Group gap={6} wrap="nowrap">
+          <Group gap={4} wrap="nowrap">
             {shared && (
-              <Avatar.Group visibleFrom="xs">
+              <Avatar.Group mr={4}>
                 {people.slice(0, 4).map((p) => (
                   <Tooltip key={p.id} label={p.name}>
                     <Avatar
@@ -295,131 +410,117 @@ export default function Show({
             >
               Share
             </Button>
-            <SegmentedControl
-              size="xs"
-              visibleFrom="sm"
-              value={project.viewStyle}
-              onChange={setView}
-              data={[
-                {
-                  value: 'list',
-                  label: <IconLayoutList size={16} aria-label="List" />,
-                },
-                {
-                  value: 'board',
-                  label: <IconLayoutBoard size={16} aria-label="Board" />,
-                },
-              ]}
-            />
-            <Menu position="bottom-end" width={220}>
-              <Menu.Target>
-                <ActionIcon
-                  variant="subtle"
-                  color="gray"
-                  aria-label="Project actions"
-                >
-                  <IconDots size={18} />
-                </ActionIcon>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item
-                  leftSection={<IconEdit size={16} />}
-                  onClick={() => showProjectForm({ ...project })}
-                  disabled={!project.mine}
-                >
-                  Edit
-                </Menu.Item>
-                <Menu.Item
-                  leftSection={
-                    project.favorite ? (
-                      <IconHeartOff size={16} />
-                    ) : (
-                      <IconHeart size={16} />
-                    )
-                  }
-                  onClick={() =>
-                    router.patch(
-                      `/projects/${project.id}`,
-                      { favorite: !project.favorite },
-                      { preserveScroll: true },
-                    )
-                  }
-                >
-                  {project.favorite
-                    ? 'Remove from favorites'
-                    : 'Add to favorites'}
-                </Menu.Item>
-                <Menu.Item
-                  hiddenFrom="sm"
-                  leftSection={<IconLayoutBoard size={16} />}
-                  onClick={() =>
-                    setView(project.viewStyle === 'list' ? 'board' : 'list')
-                  }
-                >
-                  View as {project.viewStyle === 'list' ? 'board' : 'list'}
-                </Menu.Item>
-                <Menu.Divider />
-                {/* A normal link: the server answers with location(), so the browser downloads. */}
-                <Menu.Item
-                  component={Link}
-                  href={`/projects/${project.id}/export`}
-                  leftSection={<IconDownload size={16} />}
-                >
-                  Export as CSV
-                </Menu.Item>
-                <FileButton
-                  accept=".csv,text/csv"
-                  onChange={(file) =>
-                    file &&
-                    router.post(
-                      `/projects/${project.id}/import`,
-                      { file },
-                      {
-                        forceFormData: true,
-                        preserveScroll: true,
-                        errorBag: 'import',
-                      },
-                    )
-                  }
-                >
-                  {(props) => (
-                    <Menu.Item
-                      {...props}
-                      leftSection={<IconUpload size={16} />}
-                      closeMenuOnClick={false}
-                    >
-                      Import from CSV
-                    </Menu.Item>
-                  )}
-                </FileButton>
-                <Menu.Divider />
-                {project.mine ? (
-                  <Menu.Item
-                    color="red"
-                    leftSection={<IconTrash size={16} />}
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          `Delete “${project.name}” and all its tasks?`,
-                        )
-                      )
-                        router.delete(`/projects/${project.id}`);
-                    }}
-                  >
-                    Delete project
-                  </Menu.Item>
-                ) : (
-                  <Menu.Item
-                    color="red"
-                    leftSection={<IconLogout size={16} />}
-                    onClick={() => router.post(`/projects/${project.id}/leave`)}
-                  >
-                    Leave project
-                  </Menu.Item>
-                )}
-              </Menu.Dropdown>
-            </Menu>
+            <ViewPicker value={project.viewStyle} onChange={setView} />
           </Group>
+        }
+        phoneActions={
+          <>
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              radius="xl"
+              size="lg"
+              onClick={share.open}
+              aria-label="Share"
+            >
+              <IconUserPlus size={18} />
+            </ActionIcon>
+            <ViewPicker value={project.viewStyle} onChange={setView} icon />
+          </>
+        }
+        menu={
+          <>
+            <Menu.Item
+              leftSection={<IconEdit size={16} />}
+              onClick={() => showProjectForm({ ...project })}
+              disabled={!project.mine}
+            >
+              Edit
+            </Menu.Item>
+            <Menu.Item
+              leftSection={
+                project.favorite ? (
+                  <IconHeartOff size={16} />
+                ) : (
+                  <IconHeart size={16} />
+                )
+              }
+              onClick={() =>
+                router.patch(
+                  `/projects/${project.id}`,
+                  { favorite: !project.favorite },
+                  { preserveScroll: true },
+                )
+              }
+            >
+              {project.favorite ? 'Remove from favorites' : 'Add to favorites'}
+            </Menu.Item>
+
+            <Menu.Divider />
+            {/* A normal link: the server answers with location(), so the browser downloads. */}
+            <Menu.Item
+              component={Link}
+              href={`/projects/${project.id}/export`}
+              leftSection={<IconDownload size={16} />}
+            >
+              Export as CSV
+            </Menu.Item>
+            <FileButton
+              accept=".csv,text/csv"
+              onChange={(file) =>
+                file &&
+                router.post(
+                  `/projects/${project.id}/import`,
+                  { file },
+                  {
+                    forceFormData: true,
+                    preserveScroll: true,
+                    errorBag: 'import',
+                  },
+                )
+              }
+            >
+              {(props) => (
+                <Menu.Item
+                  {...props}
+                  leftSection={<IconUpload size={16} />}
+                  closeMenuOnClick={false}
+                >
+                  Import from CSV
+                </Menu.Item>
+              )}
+            </FileButton>
+            <Menu.Divider />
+            {project.mine ? (
+              <Menu.Item
+                color="red"
+                leftSection={<IconTrash size={16} />}
+                onClick={() =>
+                  modals.openConfirmModal({
+                    title: `Delete “${project.name}”?`,
+                    children: (
+                      <Text size="sm">
+                        All its tasks go with it. There's no undo, not even an
+                        ish one.
+                      </Text>
+                    ),
+                    confirmProps: { color: 'red' },
+                    onConfirm: () => router.delete(`/projects/${project.id}`),
+                  })
+                }
+              >
+                Delete project
+              </Menu.Item>
+            ) : (
+              <Menu.Item
+                color="red"
+                leftSection={<IconLogout size={16} />}
+                onClick={() => router.post(`/projects/${project.id}/leave`)}
+              >
+                Leave project
+              </Menu.Item>
+            )}
+          </>
         }
       />
 

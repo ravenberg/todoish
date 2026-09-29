@@ -13,6 +13,10 @@
   --todo-active-text: #c3402c;
   --todo-line: #f0efed;
   --todo-mark: #fbe0dc;
+  /* The grey behind grouped screens on a phone (Browse, Productivity). */
+  --todo-grouped: #f5f4f1;
+  --todo-card: #ffffff;
+  --todo-tab-active: #efedea;
 }
 [data-mantine-color-scheme='dark'] {
   --todo-sidebar: #262626;
@@ -21,6 +25,9 @@
   --todo-active-text: #ff8b7d;
   --todo-line: #333;
   --todo-mark: #5a2b26;
+  --todo-grouped: #161616;
+  --todo-card: #242424;
+  --todo-tab-active: #333;
   --mantine-color-body: #1e1e1e;
 }
 
@@ -87,6 +94,105 @@ body {
     padding: calc(16px + env(safe-area-inset-top)) 16px
       calc(140px + env(safe-area-inset-bottom));
   }
+}
+
+/* Grouped screens on a phone: warm grey behind white cards, like iOS
+   settings. The page opts in with data-grouped. */
+@media (max-width: 48em) {
+  .main:has([data-grouped]) {
+    background: var(--todo-grouped);
+  }
+}
+.group-card {
+  background: var(--todo-card);
+  border-radius: var(--mantine-radius-lg);
+  overflow: hidden;
+}
+@media (min-width: 48em) {
+  .group-card {
+    border-radius: 0;
+    background: transparent;
+    overflow: visible;
+  }
+  .group-card > * + * {
+    border-top: 1px solid var(--todo-line);
+  }
+}
+.group-card .mantine-NavLink-root {
+  padding-block: 11px;
+}
+.group-icon {
+  color: var(--mantine-color-tomato-6);
+}
+
+a.plain-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Folding lists (Filters & Labels): rows with a line between on a big
+   screen, a white card on a phone. */
+.fold-header {
+  border-bottom: 1px solid var(--todo-line);
+  padding-bottom: 4px;
+}
+@media (max-width: 48em) {
+  .fold-header {
+    border-bottom: 0;
+  }
+}
+.label-row .row-menu {
+  opacity: 0;
+}
+.label-row:hover .row-menu,
+.label-row .row-menu[data-expanded] {
+  opacity: 1;
+}
+@media (hover: none) {
+  .label-row .row-menu {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 48em) {
+  .stat-block {
+    border: 0 !important;
+    background: var(--todo-card) !important;
+  }
+}
+
+/* Settings' section list, styled like the sidebar */
+.settings-nav {
+  flex: none;
+}
+@media (min-width: 48em) {
+  .settings-nav {
+    width: 200px;
+  }
+}
+.settings-tab {
+  justify-content: flex-start;
+  color: var(--mantine-color-text);
+  font-size: var(--mantine-font-size-sm);
+}
+.settings-tab:hover {
+  background: var(--todo-hover);
+}
+.settings-tab[data-active],
+.settings-tab[data-active]:hover {
+  background: var(--todo-active);
+  color: var(--todo-active-text);
+  font-weight: 600;
+}
+
+/* The round buttons in the top right of a phone screen, as in Todoist. */
+.phone-actions {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--todo-card);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
 }
 
 /* Tasks */
@@ -182,6 +288,62 @@ body {
   padding: 20px 0 6px;
 }
 
+/* Upcoming's week strip */
+.week-strip {
+  border-bottom: 1px solid var(--todo-line);
+}
+.week-day {
+  padding: 6px 0 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--mantine-color-text);
+  border-bottom: 2px solid transparent;
+}
+.week-day:hover:not([data-past]) {
+  background: var(--todo-hover);
+}
+.week-day[data-past] {
+  color: var(--mantine-color-dimmed);
+  opacity: 0.6;
+  cursor: default;
+}
+.week-day[data-selected] {
+  font-weight: 700;
+  border-bottom-color: var(--mantine-color-text);
+}
+.week-num {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+}
+.week-day[data-today] .week-num {
+  background: var(--mantine-color-tomato-6);
+  color: white;
+  font-weight: 700;
+}
+@media (max-width: 48em) {
+  .week-day > span:first-child {
+    display: block;
+    font-size: 11px;
+    color: var(--mantine-color-dimmed);
+  }
+}
+
+/* The layouts in a project's View popover */
+.layout-card {
+  padding: 10px 6px;
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid var(--todo-line);
+  color: var(--mantine-color-dimmed);
+}
+.layout-card[data-active] {
+  border-color: var(--mantine-color-tomato-6);
+  color: var(--mantine-color-tomato-6);
+  background: var(--todo-active);
+}
+
 /* Board */
 .board {
   display: flex;
@@ -254,6 +416,14 @@ body {
   font-size: 14px !important;
 }
 
+.chip-row {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chip-row > * {
+  flex: none;
+}
+
 /* The task dialog */
 .dialog-header {
   background: var(--mantine-color-body);
@@ -287,6 +457,48 @@ body {
 }
 .sheet {
   padding-bottom: env(safe-area-inset-bottom);
+}
+.sheet-grouped {
+  background: var(--todo-grouped);
+  display: flex;
+  flex-direction: column;
+}
+.sheet-grouped .mantine-Drawer-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.sheet-card .prop-field + .prop-field {
+  border-top: 1px solid var(--todo-line);
+}
+.sheet-card .prop-row {
+  padding: 12px;
+  border-radius: 0;
+}
+.sheet-composer {
+  position: sticky;
+  bottom: 0;
+  margin: 12px -16px -16px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: var(--todo-grouped);
+}
+.sheet-composer .comment-box {
+  background: var(--todo-card);
+}
+
+/* A property in the task dialog: the whole row is the button. */
+.prop-row {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--mantine-radius-sm);
+}
+.prop-row:hover {
+  background: var(--todo-hover);
+}
+.dialog-side .prop-field + .prop-field {
+  border-top: 1px solid var(--todo-line);
+  padding-top: 10px;
 }
 
 .menu-row:hover {
@@ -325,15 +537,7 @@ body {
 }
 .tab[data-active] {
   color: var(--mantine-color-tomato-6);
-  background: var(--todo-active);
-}
-.tab-badge {
-  position: absolute;
-  top: 0;
-  left: calc(50% + 6px);
-  min-width: 16px;
-  height: 16px;
-  font-size: 10px;
+  background: var(--todo-tab-active);
 }
 .fab {
   position: fixed;

@@ -2,7 +2,6 @@ import {
   ActionIcon,
   AppShell,
   Avatar,
-  Badge,
   Box,
   Group,
   Menu,
@@ -23,12 +22,12 @@ import {
   IconChartBar,
   IconChevronDown,
   IconCircleCheck,
-  IconFilter,
   IconHash,
   IconInbox,
   IconLayoutSidebar,
   IconLogout,
   IconMoon,
+  IconNotes,
   IconPlus,
   IconSearch,
   IconSettings,
@@ -323,7 +322,7 @@ function TabBar() {
     ['/inbox', 'Inbox', <IconInbox size={22} stroke={1.6} />],
     ['/today', 'Today', <TodayIcon size={22} today={props.today} />],
     ['/upcoming', 'Upcoming', <IconCalendarEvent size={22} stroke={1.6} />],
-    ['/browse', 'Browse', <IconFilter size={22} stroke={1.6} />],
+    ['/browse', 'Browse', <IconNotes size={22} stroke={1.6} />],
   ];
   const browsing = !tabs.slice(0, 3).some(([href]) => path === href);
   return (
@@ -348,11 +347,6 @@ function TabBar() {
           >
             {icon}
             <span>{label}</span>
-            {href === '/today' && props.counts?.today ? (
-              <Badge size="xs" px={4} className="tab-badge">
-                {props.counts.today}
-              </Badge>
-            ) : null}
           </Link>
         ))}
       </nav>

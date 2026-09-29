@@ -12,6 +12,7 @@ import {
   Skeleton,
   Stack,
   Switch,
+  SegmentedControl,
   Tabs,
   Text,
   ThemeIcon,
@@ -20,7 +21,7 @@ import { AreaChart, BarChart } from '@mantine/charts';
 import { useDisclosure } from '@mantine/hooks';
 import { IconFlame, IconZzz, IconTrophy } from '@tabler/icons-react';
 import { Deferred, useForm } from 'nestjs-mvc/react';
-import type { FormEvent } from 'react';
+import { type FormEvent, useState } from 'react';
 import { PageHeader } from '../../components/PageHeader';
 import { appLayout } from '../../layouts/AppLayout';
 
@@ -60,9 +61,12 @@ const short = (day: string, options: Intl.DateTimeFormatOptions) =>
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+const plural = (n: number, word: string) =>
+  `${n} ${word}${n === 1 ? '' : 's'}`;
+
 function Block({ children }: { children: React.ReactNode }) {
   return (
-    <Paper withBorder radius="lg" p="lg">
+    <Paper withBorder radius="lg" p="lg" className="stat-block">
       {children}
     </Paper>
   );
@@ -151,9 +155,10 @@ function GoalsForm({
  */
 export default function Index({ goals, daily, weekly, karma }: Props) {
   const [opened, form] = useDisclosure(false);
+  const [tab, setTab] = useState<string | null>('daily');
 
   return (
-    <>
+    <Box data-grouped>
       <PageHeader
         title="Productivity"
         actions={
@@ -162,13 +167,20 @@ export default function Index({ goals, daily, weekly, karma }: Props) {
           </Button>
         }
       />
-      <Tabs defaultValue="daily" keepMounted={false}>
-        <Tabs.List mb="md">
-          <Tabs.Tab value="daily">Daily</Tabs.Tab>
-          <Tabs.Tab value="weekly">Weekly</Tabs.Tab>
-          <Tabs.Tab value="karma">Karma</Tabs.Tab>
-        </Tabs.List>
-
+      {/* Todoist switches with a segmented control, not tabs. */}
+      <SegmentedControl
+        fullWidth
+        radius="xl"
+        mb="md"
+        value={tab ?? 'daily'}
+        onChange={setTab}
+        data={[
+          { value: 'daily', label: 'Daily' },
+          { value: 'weekly', label: 'Weekly' },
+          { value: 'karma', label: 'Karma' },
+        ]}
+      />
+      <Tabs value={tab} onChange={setTab} keepMounted={false}>
         <Tabs.Panel value="daily">
           <Deferred data="daily" fallback={<Loading />}>
             {daily && (
@@ -218,7 +230,7 @@ export default function Index({ goals, daily, weekly, karma }: Props) {
                       </Text>
                     </Group>
                     <Text fz={26} fw={800}>
-                      {daily.streak.current} days
+                      {plural(daily.streak.current, 'day')}
                     </Text>
                   </Block>
                   <Block>
@@ -226,7 +238,7 @@ export default function Index({ goals, daily, weekly, karma }: Props) {
                       Longest streak
                     </Text>
                     <Text fz={26} fw={800}>
-                      {daily.streak.longest} days
+                      {plural(daily.streak.longest, 'day')}
                     </Text>
                   </Block>
                 </SimpleGrid>
@@ -362,7 +374,7 @@ export default function Index({ goals, daily, weekly, karma }: Props) {
         opened={opened}
         onClose={form.close}
       />
-    </>
+    </Box>
   );
 }
 

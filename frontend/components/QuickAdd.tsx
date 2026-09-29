@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Box,
   Button,
   Divider,
@@ -206,12 +207,11 @@ export function QuickAdd() {
             {errors.text ?? errors.projectId ?? errors.assigneeId}
           </Text>
         )}
-        <Group gap={6} py="sm" wrap="wrap">
+        {/* One row of chips; on a phone it scrolls sideways, like Todoist's. */}
+        <Group gap={6} py="sm" wrap="nowrap" className="chip-row">
           <DuePicker value={shownDue} onChange={setDue} />
           <PriorityPicker value={shownPriority} onChange={setPriority} />
-          <Box w={phone ? '100%' : 220}>
-            <LabelsPicker value={shownLabels} onChange={setLabels} />
-          </Box>
+          <LabelsPicker value={shownLabels} onChange={setLabels} />
         </Group>
       </Box>
       <Divider />
@@ -224,19 +224,24 @@ export function QuickAdd() {
           <ProjectPicker value={shownProject} onChange={setProject} />
         )}
         {phone ? (
-          <Button
+          <ActionIcon
             type="submit"
             radius="xl"
-            px={10}
+            size={38}
+            variant="filled"
             disabled={!form.data.text.trim()}
             loading={form.processing}
             aria-label="Add task"
           >
-            <IconArrowUp size={18} />
-          </Button>
+            <IconArrowUp size={20} />
+          </ActionIcon>
         ) : (
           <Group gap="xs">
-            <Button variant="default" onClick={() => setOpened(false)}>
+            <Button
+              variant="light"
+              color="gray"
+              onClick={() => setOpened(false)}
+            >
               Cancel
             </Button>
             <Button

@@ -1,18 +1,10 @@
+import { ActionIcon, Avatar, Box, Group, NavLink, Text } from '@mantine/core';
 import {
-  ActionIcon,
-  Avatar,
-  Group,
-  NavLink,
-  Paper,
-  Stack,
-  Text,
-} from '@mantine/core';
-import {
+  IconCategory,
   IconChartBar,
+  IconChevronRight,
   IconCircleCheck,
-  IconFilter,
   IconHash,
-  IconInbox,
   IconPlus,
   IconSearch,
   IconSettings,
@@ -45,7 +37,6 @@ function Row({
       label={label}
       leftSection={icon}
       rightSection={right}
-      py={10}
     />
   );
 }
@@ -56,66 +47,60 @@ export default function Browse() {
   const user = props.auth.user!;
   const projects = props.sidebar?.projects.filter((p) => !p.isInbox) ?? [];
   return (
-    <>
+    <Box data-grouped>
       <Head title="Browse · Todoish" />
       <Group justify="space-between" mb="md">
         <Group gap="sm">
-          <Avatar color="tomato" radius="xl">
+          <Avatar color="tomato" radius="xl" size={34}>
             {initials(user.name)}
           </Avatar>
           <Text fw={700}>{user.name.split(' ')[0]}</Text>
         </Group>
-        <ActionIcon
-          component={Link}
-          href="/settings"
-          variant="subtle"
-          color="gray"
-          size="lg"
-          aria-label="Settings"
-        >
-          <IconSettings size={20} />
-        </ActionIcon>
+        <div className="phone-actions">
+          <ActionIcon
+            component={Link}
+            href="/settings"
+            variant="subtle"
+            color="gray"
+            radius="xl"
+            size="lg"
+            aria-label="Settings"
+          >
+            <IconSettings size={20} />
+          </ActionIcon>
+        </div>
       </Group>
 
-      <Paper radius="lg" withBorder mb="md">
-        <Row href="/search" icon={<IconSearch size={18} />} label="Search" />
+      <div className="group-card">
         <Row
-          href="/inbox"
-          icon={<IconInbox size={18} />}
-          label="Inbox"
-          right={
-            <Text size="xs" c="dimmed">
-              {props.counts?.inbox || ''}
-            </Text>
-          }
+          href="/search"
+          icon={<IconSearch size={20} className="group-icon" />}
+          label="Search"
         />
         <Row
           href="/filters-labels"
-          icon={<IconFilter size={18} />}
+          icon={<IconCategory size={20} className="group-icon" />}
           label="Filters & Labels"
         />
         <Row
           href="/completed"
-          icon={<IconCircleCheck size={18} />}
+          icon={<IconCircleCheck size={20} className="group-icon" />}
           label="Completed"
         />
         <Row
           href="/productivity"
-          icon={<IconChartBar size={18} />}
+          icon={<IconChartBar size={20} className="group-icon" />}
           label="Productivity"
         />
-      </Paper>
+      </div>
 
-      <Group justify="space-between" px={4} mb={4}>
-        <Text
-          component={Link}
-          href="/projects"
-          fw={700}
-          c="var(--mantine-color-text)"
-          td="none"
-        >
-          My Projects
-        </Text>
+      <Group justify="space-between" px={4} mt="lg" mb={6}>
+        <Link href="/projects" className="plain-link">
+          <Group gap={2}>
+            <Text fw={700}>My Projects</Text>
+            <IconChevronRight size={16} />
+          </Group>
+        </Link>
         <ActionIcon
           variant="subtle"
           color="gray"
@@ -125,29 +110,27 @@ export default function Browse() {
           <IconPlus size={18} />
         </ActionIcon>
       </Group>
-      <Paper radius="lg" withBorder>
-        <Stack gap={0}>
-          {projects.map((p) => (
-            <Row
-              key={p.id}
-              href={`/projects/${p.id}`}
-              icon={<IconHash size={18} color={colorOf(p.color)} />}
-              label={p.name}
-              right={
-                <Group gap={6}>
-                  {p.shared && (
-                    <IconUsers size={14} color="var(--mantine-color-dimmed)" />
-                  )}
-                  <Text size="xs" c="dimmed">
-                    {props.counts?.projects[p.id] || ''}
-                  </Text>
-                </Group>
-              }
-            />
-          ))}
-        </Stack>
-      </Paper>
-    </>
+      <div className="group-card">
+        {projects.map((p) => (
+          <Row
+            key={p.id}
+            href={`/projects/${p.id}`}
+            icon={<IconHash size={18} color={colorOf(p.color)} />}
+            label={p.name}
+            right={
+              <Group gap={6}>
+                {p.shared && (
+                  <IconUsers size={14} color="var(--mantine-color-dimmed)" />
+                )}
+                <Text size="xs" c="dimmed">
+                  {props.counts?.projects[p.id] || ''}
+                </Text>
+              </Group>
+            }
+          />
+        ))}
+      </div>
+    </Box>
   );
 }
 

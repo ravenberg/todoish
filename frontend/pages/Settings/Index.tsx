@@ -15,7 +15,14 @@ import {
   Title,
   useMantineColorScheme,
 } from '@mantine/core';
-import { IconCheck, IconCopy } from '@tabler/icons-react';
+import { useMediaQuery } from '@mantine/hooks';
+import {
+  IconCheck,
+  IconCopy,
+  IconPalette,
+  IconPlugConnected,
+  IconUserCircle,
+} from '@tabler/icons-react';
 import { router, useForm, useRemember } from 'nestjs-mvc/react';
 import type { FormEvent, ReactNode } from 'react';
 import { PageHeader } from '../../components/PageHeader';
@@ -267,22 +274,39 @@ function Privacy({ privacy }: Pick<Props, 'privacy'>) {
 export default function Index({ profile, privacy, integrations }: Props) {
   // The open tab survives going back and forward (useRemember).
   const [tab, setTab] = useRemember<string | null>('account', 'settings-tab');
+  const phone = useMediaQuery('(max-width: 48em)');
   return (
     <>
       <PageHeader title="Settings" />
-      <Tabs value={tab} onChange={setTab}>
-        <Tabs.List mb="md">
-          <Tabs.Tab value="account">Account</Tabs.Tab>
-          <Tabs.Tab value="integrations">Integrations</Tabs.Tab>
-          <Tabs.Tab value="privacy">Privacy & theme</Tabs.Tab>
+      {/* Todoist's settings: the sections down the left, the page beside. */}
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        orientation={phone ? 'horizontal' : 'vertical'}
+        variant="pills"
+        classNames={{ list: 'settings-nav', tab: 'settings-tab' }}
+      >
+        <Tabs.List mb={phone ? 'md' : 0}>
+          <Tabs.Tab value="account" leftSection={<IconUserCircle size={18} />}>
+            Account
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="integrations"
+            leftSection={<IconPlugConnected size={18} />}
+          >
+            Integrations
+          </Tabs.Tab>
+          <Tabs.Tab value="privacy" leftSection={<IconPalette size={18} />}>
+            Privacy & theme
+          </Tabs.Tab>
         </Tabs.List>
-        <Tabs.Panel value="account">
+        <Tabs.Panel value="account" pl={phone ? 0 : 'lg'}>
           <Account profile={profile} />
         </Tabs.Panel>
-        <Tabs.Panel value="integrations">
+        <Tabs.Panel value="integrations" pl={phone ? 0 : 'lg'}>
           <Integrations integrations={integrations} />
         </Tabs.Panel>
-        <Tabs.Panel value="privacy">
+        <Tabs.Panel value="privacy" pl={phone ? 0 : 'lg'}>
           <Privacy privacy={privacy} />
         </Tabs.Panel>
       </Tabs>

@@ -3,19 +3,22 @@ import {
   Box,
   Button,
   Code,
+  Collapse,
   ColorSwatch,
   Group,
   Menu,
   Modal,
   NavLink,
-  Paper,
   Select,
   Stack,
   Text,
   TextInput,
+  UnstyledButton,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
+  IconChevronDown,
+  IconChevronRight,
   IconDots,
   IconDroplet,
   IconPlus,
@@ -23,7 +26,7 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import { Link, router, useForm } from 'nestjs-mvc/react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { PageHeader } from '../../components/PageHeader';
 import { COLOR_OPTIONS, colorOf } from '../../lib/colors';
 import { appLayout } from '../../layouts/AppLayout';
@@ -190,99 +193,126 @@ function LabelForm({
   );
 }
 
+/** A section header, Todoist style: a chevron to fold it, a + to add. */
+function Section({
+  title,
+  onAdd,
+  addLabel,
+  children,
+}: {
+  title: string;
+  onAdd: () => void;
+  addLabel: string;
+  children: ReactNode;
+}) {
+  const [open, { toggle }] = useDisclosure(true);
+  return (
+    <Box mb="lg">
+      <Group justify="space-between" mb={4} className="fold-header">
+        <UnstyledButton onClick={toggle}>
+          <Group gap={6}>
+            {open ? (
+              <IconChevronDown size={16} />
+            ) : (
+              <IconChevronRight size={16} />
+            )}
+            <Text fw={700}>{title}</Text>
+          </Group>
+        </UnstyledButton>
+        <ActionIcon
+          variant="subtle"
+          color="gray"
+          onClick={onAdd}
+          aria-label={addLabel}
+        >
+          <IconPlus size={18} />
+        </ActionIcon>
+      </Group>
+      <Collapse expanded={open}>{children}</Collapse>
+    </Box>
+  );
+}
+
 export default function Index({ filters, labels }: Props) {
   const [filterOpened, filterForm] = useDisclosure(false);
   const [labelOpened, labelForm] = useDisclosure(false);
   return (
-    <>
+    <Box data-grouped>
       <PageHeader title="Filters & Labels" />
-      <Group justify="space-between" mb={4}>
-        <Text fw={700}>My Filters</Text>
-        <ActionIcon
-          variant="subtle"
-          color="gray"
-          onClick={filterForm.open}
-          aria-label="Add filter"
-        >
-          <IconPlus size={18} />
-        </ActionIcon>
-      </Group>
-      <Paper withBorder radius="md" mb="xl" data-xray="filters">
-        {filters.map((f) => (
-          <NavLink
-            key={f.id}
-            component={Link}
-            href={`/filters/${f.id}`}
-            prefetch
-            py={10}
-            label={f.name}
-            description={<Code fz="xs">{f.query}</Code>}
-            leftSection={<IconDroplet size={18} color={colorOf(f.color)} />}
-          />
-        ))}
-        {filters.length === 0 && (
-          <Text size="sm" c="dimmed" p="md">
-            Your filters show up here. Try “today &amp; p1”.
-          </Text>
-        )}
-      </Paper>
+      <Section title="My Filters" onAdd={filterForm.open} addLabel="Add filter">
+        <div className="group-card fold-list" data-xray="filters">
+          {filters.map((f) => (
+            <NavLink
+              key={f.id}
+              component={Link}
+              href={`/filters/${f.id}`}
+              prefetch
+              label={f.name}
+              leftSection={<IconDroplet size={18} color={colorOf(f.color)} />}
+            />
+          ))}
+          {filters.length === 0 && (
+            <Text size="sm" c="dimmed" p="md">
+              Your filters show up here. Try “today &amp; p1”.
+            </Text>
+          )}
+        </div>
+      </Section>
 
-      <Group justify="space-between" mb={4}>
-        <Text fw={700}>Labels</Text>
-        <ActionIcon
-          variant="subtle"
-          color="gray"
-          onClick={labelForm.open}
-          aria-label="Add label"
-        >
-          <IconPlus size={18} />
-        </ActionIcon>
-      </Group>
-      <Paper withBorder radius="md" data-xray="labels">
-        {labels.map((l) => (
-          <Group key={l.id} justify="space-between" wrap="nowrap" pr="xs">
-            <Box style={{ flex: 1 }}>
-              <NavLink
-                component={Link}
-                href={`/labels/${l.id}`}
-                prefetch
-                py={10}
-                label={l.name}
-                leftSection={<IconTag size={18} color={colorOf(l.color)} />}
-                rightSection={
-                  <Text size="xs" c="dimmed">
-                    {l.count || ''}
-                  </Text>
-                }
-              />
-            </Box>
-            <Menu position="bottom-end">
-              <Menu.Target>
-                <ActionIcon
-                  variant="subtle"
-                  color="gray"
-                  size="sm"
-                  aria-label="Label actions"
-                >
-                  <IconDots size={16} />
-                </ActionIcon>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item
-                  color="red"
-                  leftSection={<IconTrash size={16} />}
-                  onClick={() => router.delete(`/labels/${l.id}`)}
-                >
-                  Delete
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
-          </Group>
-        ))}
-      </Paper>
+      <Section title="Labels" onAdd={labelForm.open} addLabel="Add label">
+        <div className="group-card fold-list" data-xray="labels">
+          {labels.map((l) => (
+            <Group
+              key={l.id}
+              justify="space-between"
+              wrap="nowrap"
+              pr="xs"
+              gap={0}
+              className="label-row"
+            >
+              <Box style={{ flex: 1, minWidth: 0 }}>
+                <NavLink
+                  component={Link}
+                  href={`/labels/${l.id}`}
+                  prefetch
+                  label={l.name}
+                  leftSection={<IconTag size={18} color={colorOf(l.color)} />}
+                  rightSection={
+                    <Text size="xs" c="dimmed">
+                      {l.count || ''}
+                    </Text>
+                  }
+                />
+              </Box>
+              <Menu position="bottom-end">
+                <Menu.Target>
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    size="sm"
+                    className="row-menu"
+                    aria-label="Label actions"
+                  >
+                    <IconDots size={16} />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item
+                    color="red"
+                    leftSection={<IconTrash size={16} />}
+                    onClick={() => router.delete(`/labels/${l.id}`)}
+                  >
+                    Delete
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            </Group>
+          ))}
+        </div>
+      </Section>
       <FilterForm opened={filterOpened} onClose={filterForm.close} />
       <LabelForm opened={labelOpened} onClose={labelForm.close} />
-    </>
+    </Box>
   );
 }
 

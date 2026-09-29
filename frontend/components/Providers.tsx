@@ -1,4 +1,5 @@
 import { Anchor, Button, Group, MantineProvider, Text } from '@mantine/core';
+import { ModalsProvider } from '@mantine/modals';
 import { Notifications, notifications } from '@mantine/notifications';
 import { Link, usePage } from 'nestjs-mvc/react';
 import { type ReactNode, useEffect } from 'react';
@@ -97,7 +98,12 @@ export function Providers({ children }: { children: ReactNode }) {
       <FlashToasts />
       <ServiceWorker />
       <XrayShortcut />
-      {children}
+      <ModalsProvider
+        modalProps={{ radius: 'lg', centered: true }}
+        labels={{ confirm: 'Delete', cancel: 'Cancel' }}
+      >
+        {children}
+      </ModalsProvider>
       <XrayOverlay />
     </MantineProvider>
   );

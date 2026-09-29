@@ -2,15 +2,18 @@ import {
   ActionIcon,
   Box,
   Button,
+  Checkbox,
+  Combobox,
   Divider,
   Group,
   Menu,
   Popover,
+  ScrollArea,
   Select,
   Stack,
-  TagsInput,
   Text,
   UnstyledButton,
+  useCombobox,
 } from '@mantine/core';
 import { DatePicker, TimeInput } from '@mantine/dates';
 import {
@@ -18,11 +21,15 @@ import {
   IconArrowRight,
   IconBan,
   IconCalendarEvent,
+  IconCheck,
+  IconChevronDown,
   IconFlag,
   IconHash,
   IconInbox,
+  IconPlus,
   IconRepeat,
   IconSun,
+  IconTag,
   IconX,
 } from '@tabler/icons-react';
 import { usePage } from 'nestjs-mvc/react';
@@ -240,23 +247,30 @@ export function PriorityPicker({
   value,
   onChange,
   compact = true,
+  children,
 }: {
   value: number;
   onChange: (priority: 1 | 2 | 3 | 4) => void;
   compact?: boolean;
+  /** Replaces the default chip. */
+  children?: ReactNode;
 }) {
   return (
     <Menu position="bottom-start" withinPortal>
       <Menu.Target>
-        <Button
-          size={compact ? 'compact-sm' : 'sm'}
-          variant="default"
-          fw={400}
-          c={value < 4 ? PRIORITY_COLOR[value] : 'dimmed'}
-          leftSection={<PriorityFlag priority={value} size={14} />}
-        >
-          {value < 4 ? `P${value}` : 'Priority'}
-        </Button>
+        {children ? (
+          <Box>{children}</Box>
+        ) : (
+          <Button
+            size={compact ? 'compact-sm' : 'sm'}
+            variant="default"
+            fw={400}
+            c={value < 4 ? PRIORITY_COLOR[value] : 'dimmed'}
+            leftSection={<PriorityFlag priority={value} size={14} />}
+          >
+            {value < 4 ? `P${value}` : 'Priority'}
+          </Button>
+        )}
       </Menu.Target>
       <Menu.Dropdown>
         {[1, 2, 3, 4].map((p) => (
@@ -274,67 +288,208 @@ export function PriorityPicker({
   );
 }
 
-/** Where a task goes: Inbox or one of your projects. */
+export function ProjectIcon({
+  project,
+  size = 14,
+}: {
+  project?: { isInbox?: boolean; color: string };
+  size?: number;
+}) {
+  return project?.isInbox ? (
+    <IconInbox size={size} />
+  ) : (
+    <IconHash size={size} color={colorOf(project?.color ?? 'charcoal')} />
+  );
+}
+
+/**
+ * Where a task goes: Inbox or one of your projects. A plain button with the
+ * project's name, as in Todoist, that opens a list you can type in.
+ */
 export function ProjectPicker({
   value,
   onChange,
-  size = 'xs',
-  variant = 'filled',
+  children,
 }: {
   value: number | null;
   onChange: (projectId: number) => void;
-  size?: 'xs' | 'sm';
-  variant?: 'filled' | 'unstyled' | 'default';
+  /** Replaces the default button. */
+  children?: ReactNode;
 }) {
   const projects = usePage<SharedProps>().props.sidebar?.projects ?? [];
   const current =
     projects.find((p) => p.id === value) ?? projects.find((p) => p.isInbox);
+  const [search, setSearch] = useState('');
+  const combobox = useCombobox({
+    onDropdownClose: () => setSearch(''),
+    onDropdownOpen: () => combobox.focusSearchInput(),
+  });
+  const shown = projects.filter((p) =>
+    (p.isInbox ? 'Inbox' : p.name)
+      .toLowerCase()
+      .includes(search.toLowerCase().trim()),
+  );
+
   return (
-    <Select
-      size={size}
-      variant={variant}
-      w={180}
-      aria-label="Project"
-      value={current ? String(current.id) : null}
-      allowDeselect={false}
-      searchable
-      comboboxProps={{ withinPortal: true, width: 220 }}
-      leftSection={
-        current?.isInbox ? (
-          <IconInbox size={14} />
+    <Combobox
+      store={combobox}
+      width={240}
+      position="bottom-start"
+      withinPortal
+      onOptionSubmit={(id) => {
+        onChange(Number(id));
+        combobox.closeDropdown();
+      }}
+    >
+      <Combobox.Target targetType="button">
+        {children ? (
+          <Box onClick={() => combobox.toggleDropdown()}>{children}</Box>
         ) : (
-          <IconHash size={14} color={colorOf(current?.color ?? 'charcoal')} />
-        )
-      }
-      data={projects.map((p) => ({
-        value: String(p.id),
-        label: p.isInbox ? 'Inbox' : p.name,
-      }))}
-      onChange={(id) => id && onChange(Number(id))}
-    />
+          <Button
+            variant="subtle"
+            color="gray"
+            size="compact-sm"
+            fw={500}
+            c="var(--mantine-color-text)"
+            leftSection={<ProjectIcon project={current} />}
+            rightSection={<IconChevronDown size={12} />}
+            onClick={() => combobox.toggleDropdown()}
+          >
+            {current?.isInbox ? 'Inbox' : current?.name}
+          </Button>
+        )}
+      </Combobox.Target>
+      <Combobox.Dropdown>
+        <Combobox.Search
+          value={search}
+          onChange={(e) => setSearch(e.currentTarget.value)}
+          placeholder="Type a project name"
+        />
+        <Combobox.Options>
+          <ScrollArea.Autosize mah={260} type="scroll">
+            {shown.map((p) => (
+              <Combobox.Option value={String(p.id)} key={p.id}>
+                <Group gap={8} wrap="nowrap">
+                  <ProjectIcon project={p} />
+                  <Text size="sm" style={{ flex: 1 }} truncate>
+                    {p.isInbox ? 'Inbox' : p.name}
+                  </Text>
+                  {p.id === current?.id && (
+                    <IconCheck
+                      size={14}
+                      color="var(--mantine-color-tomato-6)"
+                    />
+                  )}
+                </Group>
+              </Combobox.Option>
+            ))}
+            {shown.length === 0 && (
+              <Combobox.Empty>No project by that name</Combobox.Empty>
+            )}
+          </ScrollArea.Autosize>
+        </Combobox.Options>
+      </Combobox.Dropdown>
+    </Combobox>
   );
 }
 
-/** Your labels, and new ones as you type them. */
+/**
+ * Labels, Todoist style: a chip that opens your labels with a tick box
+ * each. Typing a name that doesn't exist yet offers to create it.
+ */
 export function LabelsPicker({
   value,
   onChange,
+  children,
 }: {
   value: string[];
   onChange: (labels: string[]) => void;
+  /** Replaces the default chip. */
+  children?: ReactNode;
 }) {
   const labels = usePage<SharedProps>().props.sidebar?.labels ?? [];
+  const [search, setSearch] = useState('');
+  const combobox = useCombobox({
+    onDropdownClose: () => setSearch(''),
+    onDropdownOpen: () => combobox.focusSearchInput(),
+  });
+  const query = search.trim().toLowerCase();
+  const names = [
+    ...labels.map((l) => l.name),
+    ...value.filter((v) => !labels.some((l) => l.name === v)),
+  ];
+  const shown = names.filter((n) => n.toLowerCase().includes(query));
+  const color = (name: string) =>
+    colorOf(labels.find((l) => l.name === name)?.color ?? 'charcoal');
+  const toggle = (name: string) =>
+    onChange(
+      value.includes(name) ? value.filter((v) => v !== name) : [...value, name],
+    );
+
   return (
-    <TagsInput
-      size="xs"
-      placeholder={value.length ? '' : 'Add a label'}
-      data={labels.map((l) => l.name)}
-      value={value}
-      onChange={onChange}
-      clearable
-      comboboxProps={{ withinPortal: true }}
-      aria-label="Labels"
-    />
+    <Combobox
+      store={combobox}
+      width={240}
+      position="bottom-start"
+      withinPortal
+      onOptionSubmit={(name) => {
+        toggle(name);
+        setSearch('');
+      }}
+    >
+      <Combobox.Target targetType="button">
+        {children ? (
+          <Box onClick={() => combobox.toggleDropdown()}>{children}</Box>
+        ) : (
+          <Button
+            size="compact-sm"
+            variant="default"
+            fw={400}
+            c={value.length ? 'var(--mantine-color-text)' : 'dimmed'}
+            leftSection={<IconTag size={14} />}
+            onClick={() => combobox.toggleDropdown()}
+          >
+            {value.length ? value.join(', ') : 'Labels'}
+          </Button>
+        )}
+      </Combobox.Target>
+      <Combobox.Dropdown>
+        <Combobox.Search
+          value={search}
+          onChange={(e) => setSearch(e.currentTarget.value)}
+          placeholder="Type a label"
+        />
+        <Combobox.Options>
+          <ScrollArea.Autosize mah={260} type="scroll">
+            {shown.map((name) => (
+              <Combobox.Option value={name} key={name}>
+                <Group gap={8} wrap="nowrap">
+                  <IconTag size={14} color={color(name)} />
+                  <Text size="sm" style={{ flex: 1 }} truncate>
+                    {name}
+                  </Text>
+                  <Checkbox
+                    size="xs"
+                    checked={value.includes(name)}
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden
+                  />
+                </Group>
+              </Combobox.Option>
+            ))}
+            {query && !names.some((n) => n.toLowerCase() === query) && (
+              <Combobox.Option value={search.trim()}>
+                <Group gap={8} wrap="nowrap">
+                  <IconPlus size={14} />
+                  <Text size="sm">Create “{search.trim()}”</Text>
+                </Group>
+              </Combobox.Option>
+            )}
+          </ScrollArea.Autosize>
+        </Combobox.Options>
+      </Combobox.Dropdown>
+    </Combobox>
   );
 }
 
